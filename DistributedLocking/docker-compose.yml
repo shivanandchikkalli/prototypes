@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+  redis1:
+    image: redis:7-alpine
+    container_name: redis1
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis1-data:/data
+
+  redis2:
+    image: redis:7-alpine
+    container_name: redis2
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis2-data:/data
+
+  redis3:
+    image: redis:7-alpine
+    container_name: redis3
+    restart: unless-stopped
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis3-data:/data
+
+  redis4:
+    image: redis:7-alpine
+    container_name: redis4
+    restart: unless-stopped
+    ports:
+      - "6382:6379"
+    volumes:
+      - redis4-data:/data
+
+  redis5:
+    image: redis:7-alpine
+    container_name: redis5
+    restart: unless-stopped
+    ports:
+      - "6383:6379"
+    volumes:
+      - redis5-data:/data
+
+volumes:
+  redis1-data:
+  redis2-data:
+  redis3-data:
+  redis4-data:
+  redis5-data:
