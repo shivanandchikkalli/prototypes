@@ -1,0 +1,5 @@
+{
+  "cdn.example.com": "https://origin.example.com",
+  "cdn2.example.com": "http://origin2.example.com",
+  "localhost": "https://edge.asdfg.com"
+}
