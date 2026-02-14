@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zookeeper Browser - Kafka Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+            max-height: 750px;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .sidebar-section h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .sidebar-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: #333;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .sidebar-item:hover {
+            background: #e0e0e0;
+            padding-left: 16px;
+        }
+
+        .sidebar-item.active {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        .main {
+            padding: 30px;
+            overflow-y: auto;
+            max-height: 750px;
+        }
+
+        .panel {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .panel h3 {
+            font-size: 14px;
+            color: #667eea;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .breadcrumb {
+            padding: 10px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .breadcrumb-separator {
+            margin: 0 5px;
+            color: #999;
+        }
+
+        .tree-node {
+            padding: 8px 12px;
+            margin-bottom: 4px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tree-node:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+            padding-left: 16px;
+        }
+
+        .tree-node.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .tree-icon {
+            width: 20px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .node-data {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .node-data h3 {
+            font-size: 13px;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .data-block {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #333;
+            word-break: break-all;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .data-block::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .data-block::-webkit-scrollbar-track {
+            background: #f8f9fa;
+        }
+
+        .data-block::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 3px;
+        }
+
+        .children-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .child-item {
+            padding: 10px 12px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .child-item:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f0f0f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #ef5350;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #66bb6a;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .back-link {
+            display: inline-block;
+            color: #667eea;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Zookeeper Browser</h1>
+            <p>Explore the coordination layer that powers your Kafka cluster</p>
+        </header>
+
+        <div class="content">
+            <div class="sidebar">
+                <div class="sidebar-section">
+                    <h3>Quick Access</h3>
+                    <div class="sidebar-item active" onclick="browseNode('/', 'root')">
+                        🏠 Root
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Key Paths</h3>
+                    <div class="sidebar-item" onclick="browseNode('/brokers/ids', 'brokers')">
+                        📊 /brokers/ids
+                    </div>
+                    <div class="sidebar-item" onclick="browseNode('/brokers/topics', 'topics')">
+                        📚 /brokers/topics
+                    </div>
+                    <div class="sidebar-item" onclick="browseNode('/config/topics', 'config-topics')">
+                        ⚙️ /config/topics
+                    </div>
+                    <div class="sidebar-item" onclick="browseNode('/controller', 'controller')">
+                        👑 /controller
+                    </div>
+                    <div class="sidebar-item" onclick="browseNode('/consumers', 'consumers')">
+                        👥 /consumers
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Actions</h3>
+                    <button onclick="loadClusterState()" style="width: 100%; margin-bottom: 8px;">
+                        📈 Cluster State
+                    </button>
+                    <button onclick="refreshAll()" style="width: 100%;">
+                        🔄 Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="main">
+                <a href="/" class="back-link">← Back to Admin Dashboard</a>
+                
+                <div id="current-path-display"></div>
+                <div id="content-area">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading Zookeeper data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/zookeeper';
+
+        function setActiveItem(id) {
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            const item = document.querySelector(`[onclick*="'${id}'"]`);
+            if (item) item.classList.add('active');
+        }
+
+        async function browseNode(path, id) {
+            setActiveItem(id);
+            showLoading();
+
+            try {
+                const response = await fetch(`${API_BASE}/browse?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayBrowserView(path, data.children);
+                } else {
+                    showError(`Failed to browse: ${data.error}`);
+                }
+            } catch (error) {
+                showError(`Error browsing path: ${error.message}`);
+            }
+        }
+
+        async function getNodeData(path) {
+            try {
+                const response = await fetch(`${API_BASE}/node?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayNodeDetails(data.nodeData);
+                } else {
+                    showError(`Failed to get node: ${data.error}`);
+                }
+            } catch (error) {
+                showError(`Error getting node: ${error.message}`);
+            }
+        }
+
+        async function loadClusterState() {
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/cluster`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayClusterState(data.clusterState);
+                } else {
+                    showError(`Failed to load cluster state: ${data.error}`);
+                }
+            } catch (error) {
+                showError(`Error loading cluster state: ${error.message}`);
+            }
+        }
+
+        function displayBrowserView(path, children) {
+            const pathParts = path.split('/').filter(p => p).length;
+            const displayPath = path === '/' ? 'Zookeeper Root' : path;
+
+            let html = `
+                <div class="panel">
+                    <h2>📂 Path: ${displayPath}</h2>
+                    <div class="breadcrumb">
+                        <a onclick="browseNode('/', 'root')">root</a>
+                        ${path !== '/' ? path.split('/').filter(p => p).map((part, i) => {
+                            const pathTo = '/' + path.split('/').filter(p => p).slice(0, i + 1).join('/');
+                            return ` <span class="breadcrumb-separator">/</span> <a onclick="browseNode('${pathTo}', '${pathTo}')">${part}</a>`;
+                        }).join('') : ''}
+                    </div>
+                    
+                    ${children.length > 0 ? `
+                        <h3>Children (${children.length})</h3>
+                        <div class="children-list">
+                            ${children.map(child => `
+                                <div class="child-item" onclick="browseNode('${path === '/' ? '/' + child : path + '/' + child}', '${child}')">
+                                    📄 ${child}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <p style="padding: 10px; color: #999;">No children found</p>
+                    `}
+                </div>
+            `;
+
+            document.getElementById('current-path-display').innerHTML = html;
+        }
+
+        function displayNodeDetails(nodeData) {
+            let html = `
+                <div class="panel">
+                    <h2>📋 Node Details</h2>
+                    <div class="breadcrumb">${nodeData.path}</div>
+                    
+                    ${nodeData.data && nodeData.data !== '(empty)' ? `
+                        <div class="node-data">
+                            <h3>Data Content</h3>
+                            <div class="data-block">${escapeHtml(nodeData.data)}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${nodeData.children && nodeData.children.length > 0 ? `
+                        <div class="node-data">
+                            <h3>Children (${nodeData.children.length})</h3>
+                            <div class="children-list">
+                                ${nodeData.children.map(child => `
+                                    <div class="child-item" onclick="browseNode('${nodeData.path === '/' ? '/' + child : nodeData.path + '/' + child}', '${child}')">
+                                        📄 ${child}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${nodeData.stat ? `
+                        <div class="node-data">
+                            <h3>Statistics</h3>
+                            <div class="data-block">${nodeData.stat}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            document.getElementById('current-path-display').innerHTML = html;
+        }
+
+        function displayClusterState(clusterState) {
+            let html = `
+                <div class="panel">
+                    <h2>📊 Cluster State Summary</h2>
+                    
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">${clusterState.brokers ? clusterState.brokers.length : 0}</div>
+                            <div class="stat-label">Active Brokers</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${clusterState.topics ? clusterState.topics.length : 0}</div>
+                            <div class="stat-label">Topics</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${clusterState.controller || 'N/A'}</div>
+                            <div class="stat-label">Controller ID</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (clusterState.brokers && clusterState.brokers.length > 0) {
+                html += `
+                    <div class="panel">
+                        <h2>🖥️ Brokers</h2>
+                        ${clusterState.brokers.map((broker, i) => `
+                            <div style="padding: 10px; margin-bottom: 8px; background: white; border: 1px solid #e0e0e0; border-radius: 4px;">
+                                <strong>Broker ${i}: ${broker.brokerId}</strong>
+                                <div style="font-size: 12px; color: #666; margin-top: 5px;">${broker.data || 'No data'}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            if (clusterState.topics && clusterState.topics.length > 0) {
+                html += `
+                    <div class="panel">
+                        <h2>📚 Topics</h2>
+                        ${clusterState.topics.map(topic => `
+                            <div style="padding: 10px; margin-bottom: 8px; background: white; border: 1px solid #e0e0e0; border-radius: 4px;">
+                                <strong>${topic.topic || topic.name}</strong>
+                                <div style="font-size: 12px; color: #666; margin-top: 5px;">${topic.data || 'No data'}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            document.getElementById('current-path-display').innerHTML = html;
+        }
+
+        function showLoading() {
+            document.getElementById('content-area').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading data...</p>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            document.getElementById('content-area').innerHTML = `
+                <div class="error">
+                    ❌ ${escapeHtml(message)}
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function refreshAll() {
+            browseNode('/', 'root');
+        }
+
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', () => {
+            browseNode('/', 'root');
+        });
+    </script>
+</body>
+</html>

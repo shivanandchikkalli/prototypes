@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Broker Visualization - Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .refresh-info {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .brokers-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1400px) {
+            .brokers-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .broker-column {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            min-height: 600px;
+            overflow-y: auto;
+        }
+
+        .broker-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .broker-header h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .broker-stats {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .partition-box {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .partition-box:hover {
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .partition-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .partition-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .partition-badges {
+            display: flex;
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .badge {
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+
+        .badge-offset {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge-messages {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .messages-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .message-item {
+            background: white;
+            border-left: 3px solid #667eea;
+            padding: 8px;
+            margin-bottom: 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .message-key {
+            font-weight: 600;
+            color: #667eea;
+            word-break: break-all;
+        }
+
+        .message-value {
+            color: #555;
+            margin-top: 3px;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+        }
+
+        .message-meta {
+            font-size: 10px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        .empty-partition {
+            color: #999;
+            text-align: center;
+            padding: 20px;
+            font-size: 13px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        .refresh-status {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .scroll-hint {
+            font-size: 11px;
+            color: #999;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Kafka Broker Visualization</h1>
+            <div>
+                <div class="refresh-info">Real-time Updates</div>
+                <div class="refresh-status">
+                    Auto-refreshing every 2 seconds <span id="spinner" style="display:none;" class="loading"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="brokers-grid" id="brokersGrid">
+            <div class="no-data">Loading broker data... <div class="loading" style="display:inline-block; margin-left: 10px;"></div></div>
+        </div>
+
+        <div class="controls">
+            <button onclick="refreshData()">🔄 Refresh Now</button>
+            <button onclick="clearData()">🗑️ Clear Messages</button>
+        </div>
+    </div>
+
+    <script>
+        const BROKERS = [1, 2, 3];
+        let autoRefreshInterval;
+
+        async function refreshData() {
+            const spinner = document.getElementById('spinner');
+            spinner.style.display = 'inline-block';
+
+            try {
+                const response = await fetch('/api/visualization/brokers');
+                const data = await response.json();
+
+                if (data.success) {
+                    renderBrokers(data.brokers);
+                } else {
+                    console.error('Error:', data.error);
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+
+        function renderBrokers(brokers) {
+            const grid = document.getElementById('brokersGrid');
+
+            grid.innerHTML = brokers.map((broker, index) => {
+                const brokerId = index + 1;
+                if (!broker) {
+                    return `
+                        <div class="broker-column">
+                            <div class="broker-header">
+                                <h2>Broker ${brokerId}</h2>
+                                <div class="broker-stats">No data yet</div>
+                            </div>
+                            <div class="no-data">Waiting for messages...</div>
+                        </div>
+                    `;
+                }
+
+                const partitionsHtml = broker.result.partitions.length === 0
+                    ? '<div class="empty-partition">No partitions</div>'
+                    : broker.result.partitions.map(partition => renderPartition(partition)).join('');
+
+                return `
+                    <div class="broker-column">
+                        <div class="broker-header">
+                            <h2>Broker ${broker.result.brokerId}</h2>
+                            <div class="broker-stats">
+                                ${broker.result.partitionCount} partition(s) • ${broker.result.totalMessages} message(s)
+                            </div>
+                        </div>
+                        <div>
+                            ${partitionsHtml}
+                        </div>
+                        <div class="scroll-hint">↓ Scroll to see more</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderPartition(partition) {
+            const messagesHtml = partition.messages.length === 0
+                ? '<div class="empty-partition">No messages yet</div>'
+                : partition.messages.map(msg => `
+                    <div class="message-item">
+                        <div class="message-key">📨 ${escapeHtml(msg.key)}</div>
+                        <div class="message-value">${escapeHtml(msg.value)}</div>
+                        <div class="message-meta">Offset: ${msg.offset} • ${new Date(msg.timestamp).toLocaleTimeString()}</div>
+                    </div>
+                `).join('');
+
+            return `
+                <div class="partition-box">
+                    <div class="partition-header">
+                        <div class="partition-title">📂 ${partition.topic} • Partition ${partition.partitionId}</div>
+                        <div class="partition-badges">
+                            <span class="badge badge-offset">Offset: ${partition.latestOffset}</span>
+                            <span class="badge badge-messages">${partition.messageCount} msgs</span>
+                        </div>
+                    </div>
+                    <div class="messages-list">
+                        ${messagesHtml}
+                    </div>
+                    ${partition.replicas ? `<div style="font-size: 11px; color: #999; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
+                        <strong>Replicas:</strong> Brokers ${partition.replicas.join(', ')}
+                    </div>` : ''}
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function clearData() {
+            if (confirm('Are you sure you want to clear all messages from the display?')) {
+                // This would require a new API endpoint to clear the message store
+                alert('Clear functionality would need to be implemented on the server');
+            }
+        }
+
+        // Start auto-refresh
+        function startAutoRefresh() {
+            refreshData();
+            autoRefreshInterval = setInterval(refreshData, 10000);
+        }
+
+        // Stop auto-refresh
+        function stopAutoRefresh() {
+            clearInterval(autoRefreshInterval);
+        }
+
+        // Start on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            startAutoRefresh();
+        });
+
+        // Stop on page unload
+        window.addEventListener('beforeunload', () => {
+            stopAutoRefresh();
+        });
+
+        // Pause refresh when tab is not visible
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else {
+                startAutoRefresh();
+            }
+        });
+    </script>
+</body>
+</html>
